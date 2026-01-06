@@ -23,7 +23,7 @@ app.post('/ingest', async (req: Request, res: Response, next: express.NextFuncti
     }
     res.json({ message: 'Successfully ingested data' });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
