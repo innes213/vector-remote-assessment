@@ -1,5 +1,7 @@
 # Architecture Design Document
 
+An approach to handling large quantities of medical data with scaling and auditability in focus. Due to timeboxing and a lack of domain expertice, the architecture and data models are naive, but this is intended to be a starting point for future discussions.
+
 ## Problem Analysis 
 This system takes in a large volume of critical data that is diverse and expected to grow. In order to process this data effectively, we will use an event-driven architecture that takes in data, stores the raw data, then transforms the data in to an internal schema for analysis and interum storage.
 
@@ -37,13 +39,42 @@ This stage posts the alert to the clinic, if needed, via channel determined by c
 ![High-Level Architecture](./VRC%20Overview.png "High Level Architecture")
 
 ## Data Models
-### Ingestion
-input: Any format from a supported device. 
+Incoming data: Could be anything but if it is not an expected format (JSON, CSV, etc) ingestion will fail.
+TransformMessage: an object containing the raw data and a reference to the stored-original
+```typescript
+interface TransformMessage {
+  rawDataRef: string;
+  rawData: unknown;
+}
+```
 
-### Raw Storage
-input: rawStorageMessage
-###
-
+VRCMeasurement: Internal measurement format consisting of data required for analysis and reference to the original stored measurement.
+```typescript
+interface VRCMeasurement {
+  patient_id: string;
+  device_id: string;
+  measurement_id: string;
+  measurement_value: number;
+  measurement_normal_range: [number, number];
+  measurement_unit: string;
+  measurement_timestamp: string;
+  rawDataRef: string;
+```
+AlertMessage: Contains data for generating a clinical alert
+```typescript
+interface AlertMessage {
+  patient_id: string;
+  device_id: string;
+  measurement_id: string;
+  measurement_value: number;
+  measurement_unit: string;
+  measurement_timestamp: string;
+  abnormality_type: string;
+  abnormality_severity: string;
+  abnormality_message: string;
+  rawDataRef: string;
+}
+```
 
 ## Architectural Decision Record 
 
@@ -95,5 +126,7 @@ Here we describe what to measure wrt the data pipeline.
 * Message queue size
 * Dead Letter Queue size
 
-
-
+## Assumptions
+* Always only one patient per device.
+* If a device is given to a new patient, the `device_id` is not updated.
+* If a patient has more than one device, their patient_id is the same on each device if and only if the devices are associated with the same clinic.

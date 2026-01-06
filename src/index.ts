@@ -4,6 +4,7 @@ import { ingest } from './workers/ingest';
 import { transform } from './workers/transform';
 import { analyze } from './workers/analyze';
 import { alert } from './workers/alert';
+import { AlertMessage, TransformMessage, VRCMeasurement } from './models/messages';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,8 +15,12 @@ app.use(express.json());
 app.post('/ingest', async (req: Request, res: Response, next: express.NextFunction) => {
   try {
     const data = req.body;
-    await ingest(data);
-    eventEmitter.emit('transform', data);
+    const rawDataRef = await ingest(data);
+    if (rawDataRef) {
+      const transformMessage: TransformMessage = { rawDataRef, rawData: data };
+      console.log('Transforming data:', transformMessage);
+      eventEmitter.emit('transform', transformMessage);
+    }
     res.json({ message: 'Successfully ingested data' });
   } catch (error) {
     next(error);
@@ -27,7 +32,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Event listeners for worker pipeline
-eventEmitter.on('transform', async (data: unknown) => {
+eventEmitter.on('transform', async (data: TransformMessage) => {
   try {
     const transformedData = await transform(data);
     eventEmitter.emit('analyze', transformedData);
@@ -36,30 +41,23 @@ eventEmitter.on('transform', async (data: unknown) => {
   }
 });
 
-eventEmitter.on('analyze', async (data: unknown) => {
+eventEmitter.on('analyze', async (data: VRCMeasurement) => {
   try {
-    const analyzedData = await analyze(data);
-    eventEmitter.emit('alert', analyzedData);
+    const alertMessage = await analyze(data);
+    if (alertMessage) {
+      eventEmitter.emit('alert', alertMessage);
+    }
   } catch (error) {
     console.error('Error in analyze worker:', error);
   }
 });
 
-eventEmitter.on('alert', async (data: unknown) => {
+eventEmitter.on('alert', async (data: AlertMessage) => {
   try {
     await alert(data);
   } catch (error) {
     console.error('Error in alert worker:', error);
   }
-});
-
-// Global error handler middleware
-app.use((err: Error, req: Request, res: Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
-  });
 });
 
 // Process-level error handlers
