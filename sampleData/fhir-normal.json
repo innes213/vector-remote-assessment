@@ -1,0 +1,38 @@
+{
+  "resourceType": "Observation",
+  "id": "hr-20260105-024058",
+  "status": "final",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "8867-4",
+        "display": "Heart rate"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/pat-983472"
+  },
+  "device": {
+    "reference": "Device/ax9-002341"
+  },
+  "effectiveDateTime": "2026-01-05T02:40:58-08:00",
+  "issued": "2026-01-05T02:41:10Z",
+  "valueQuantity": {
+    "value": 72,
+    "unit": "beats/minute",
+    "system": "http://unitsofmeasure.org",
+    "code": "/min"
+  }
+}
